@@ -25,6 +25,7 @@
 ### Dataset
 - Ruddit Dataset
 - Jigsaw Rate Severity of Toxic Comments
+- toxic-task
 ### Due Date
 - Team Merge Deadline - 2022/01/31
 - Submission Deadline - 2022/02/07
