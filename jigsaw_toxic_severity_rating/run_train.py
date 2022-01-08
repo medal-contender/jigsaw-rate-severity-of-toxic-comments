@@ -105,6 +105,8 @@ def run_training(
 
 def main(args):
 
+    # TODO: Config로 받을지 Args로 받을지 결정해야 함 
+
     # Args로 Config 설정
     CONFIG = {
         "seed": args.seed, 
