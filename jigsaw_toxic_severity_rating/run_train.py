@@ -142,7 +142,7 @@ def main(args):
     HASH_NAME = id_generator(size=12)
 
     # 모델 저장 경로 
-    root_save_dir = './'
+    root_save_dir = './trained'
     save_dir = os.path.join(root_save_dir,CONFIG['model_name'],CONFIG['scheduler'])
     os.makedirs(save_dir,exist_ok=True)
 
