@@ -28,3 +28,6 @@ tqdm
 transformers==4.15.0
 typing-extensions==4.0.1
 urllib3
+wandb
+pandas
+scikit-learn
