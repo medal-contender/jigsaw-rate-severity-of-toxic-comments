@@ -1,6 +1,6 @@
 # Jigsaw Rate Severity Of Toxic Comments
 ---
-<img src="./images/jigsaw.jpg" width=550>      
+<img src="./images/jigsaw.jpg" width=550>{: .mx-auto.d-block :}  
 
 ---
 
