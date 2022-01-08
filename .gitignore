@@ -1,0 +1,8 @@
+csv_clean_folds
+csv_folds
+csv_ruddit_folds
+input/jigsaw-toxic-comment-classification-challenge
+input/jigsaw-toxic-severity-rating
+input/ruddit-jigsaw-dataset
+wandb
+test_log.txt
