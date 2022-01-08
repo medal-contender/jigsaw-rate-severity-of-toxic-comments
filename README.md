@@ -1,5 +1,7 @@
 # Jigsaw Rate Severity Of Toxic Comments
 ---
+<img src="./images/jigsaw.jpg" width=550>
+---
 ## Members
 
 ```
