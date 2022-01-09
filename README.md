@@ -1,6 +1,9 @@
 # Jigsaw Rate Severity Of Toxic Comments
 ---
-<img src="./images/jigsaw.jpg" width=550>      
+<p align="center">
+  <img src="./images/jigsaw.jpg" width=550>
+</p>
+
 
 ---
 
@@ -22,6 +25,7 @@
 ### Dataset
 - Ruddit Dataset
 - Jigsaw Rate Severity of Toxic Comments
+- toxic-task
 ### Due Date
 - Team Merge Deadline - 2022/01/31
 - Submission Deadline - 2022/02/07
@@ -29,6 +33,11 @@
 ---
 
 ## Program
+
+- Fetch Pretrained Models
+```shell
+$ sh ./download_pretrained_models.sh
+```
 
 - Train
 ```shell
