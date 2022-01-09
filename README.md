@@ -34,6 +34,11 @@
 
 ## Program
 
+- Fetch Pretrained Models
+```shell
+$ sh ./download_pretrained_models.sh
+```
+
 - Train
 ```shell
 $ python3 ~~~
