@@ -105,6 +105,8 @@ def run_training(
 
 def main(args):
 
+    # TODO: Config로 받을지 Args로 받을지 결정해야 함 
+
     # Args로 Config 설정
     CONFIG = {
         "seed": args.seed, 
@@ -134,8 +136,7 @@ def main(args):
         CONFIG['train_batch_size'] = int(CONFIG['train_batch_size']/2)
         CONFIG['valid_batch_size'] = int(CONFIG['valid_batch_size']/2)
         CONFIG['test_batch_size'] = int(CONFIG['test_batch_size']/2)
-
-    wandb.login(key='27b98c412ec8a5a4e2a7433293569c9122e88fab')
+    wandb.login(key=args.wandb_key)
 
     set_seed(CONFIG['seed'])
 
@@ -204,6 +205,12 @@ def main(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--wandb-key", 
+        type=str, 
+        default='', 
+        help='Type Authentication Key For WANDB.'
+    )
     parser.add_argument(
         "--hash-name", 
         type=str, 
