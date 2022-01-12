@@ -1,8 +1,8 @@
-# 디렉토리 생성 
+# 디렉토리 생성
 mkdir models
 cd ./models
 
-# 모델 레포지토리 클론 
+# 모델 레포지토리 클론
 git lfs install
 # HateBERT
 git clone https://huggingface.co/GroNLP/hateBERT
@@ -26,4 +26,3 @@ git clone https://huggingface.co/bert-base-cased
 git clone https://huggingface.co/unitary/toxic-bert
 
 GIT_LFS_SKIP_SMUDGE=1
-
