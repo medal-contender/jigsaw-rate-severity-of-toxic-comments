@@ -8,6 +8,7 @@ input/ruddit-jigsaw-dataset
 wandb
 test_log.txt
 models/
+trained/
 .vscode
 
 # Byte-compiled / optimized / DLL files
