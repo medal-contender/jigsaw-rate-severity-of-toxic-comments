@@ -46,4 +46,4 @@ infer_param:
   shuffle: False
   pin_memory: True
   checkpoint_path: checkpoint/bert/bert.bin
-  save_dir: output/bert
+  save_dir: /jigsaw/output/bert

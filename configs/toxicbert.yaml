@@ -46,4 +46,4 @@ infer_param:
   shuffle: False
   pin_memory: True
   checkpoint_path: checkpoint/toxicbert/toxicbert.bin
-  save_dir: output/toxicbert
+  save_dir: /jigsaw/output/toxicbert

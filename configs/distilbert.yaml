@@ -46,4 +46,4 @@ infer_param:
   shuffle: False
   pin_memory: True
   checkpoint_path: checkpoint/distilbert/distilbert.bin
-  save_dir: output/distilbert
+  save_dir: /jigsaw/output/distilbert
