@@ -3,13 +3,11 @@ import torch
 import numpy as np
 from tqdm import tqdm
 from medal_challenger.model import JigsawModel
+from medal_challenger.configs import BERT_MODEL_LIST
 
 @torch.no_grad()
 def infer_with_one_model(model, dataloader, device):
     model.eval()
-    
-    dataset_size = 0
-    running_loss = 0.0
     
     PREDS = []
     
@@ -26,15 +24,18 @@ def infer_with_one_model(model, dataloader, device):
     
     return PREDS
 
-def bert_ensemble(model_paths, dataloader, CONFIG):
+def bert_ensemble(model_paths, dataloader, cfg):
     final_preds = []
     for i, path in enumerate(model_paths):
-        model = JigsawModel(f"../models/{CONFIG['model_name']}")
-        model.to(CONFIG['device'])
+        model = JigsawModel(
+            f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}",
+            cfg.model_param.num_classes
+        )
+        model.to(cfg.model_param.device)
         model.load_state_dict(torch.load(path))
         
         print(f"Getting predictions for model {i+1}")
-        preds = infer_with_one_model(model, dataloader, CONFIG['device'])
+        preds = infer_with_one_model(model, dataloader, cfg.model_param.device)
         final_preds.append(preds)
     
     final_preds = np.array(final_preds)
