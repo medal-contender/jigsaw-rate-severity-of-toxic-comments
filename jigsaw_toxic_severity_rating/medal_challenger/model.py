@@ -1,6 +1,7 @@
 import torch.nn as nn
 from transformers import AutoModel
 from torch.optim import lr_scheduler
+from medal_challenger.configs import SCHEDULER_LIST
 
 class JigsawModel(nn.Module):
 
@@ -30,17 +31,23 @@ class JigsawModel(nn.Module):
         outputs = self.fc(out)
         return outputs
 
-def fetch_scheduler(optimizer, CONFIG):
+def fetch_scheduler(optimizer, cfg):
     '''
         Config에 맞는 Solver Scheduler를 반환합니다.
     '''
-    if CONFIG['scheduler'] == 'CosineAnnealingLR':
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer,T_max=CONFIG['T_max'], 
-                                                   eta_min=CONFIG['min_lr'])
-    elif CONFIG['scheduler'] == 'CosineAnnealingWarmRestarts':
-        scheduler = lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=CONFIG['T_0'], 
-                                                             eta_min=CONFIG['min_lr'])
-    elif CONFIG['scheduler'] == 'None':
+    if SCHEDULER_LIST[cfg.model_param.scheduler] == 'CosineAnnealingLR':
+        scheduler = lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            T_max=cfg.train_param.T_max, 
+            eta_min=float(cfg.train_param.min_lr)
+        )
+    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'CosineAnnealingWarmRestarts':
+        scheduler = lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer,
+            T_0=cfg.train_param.T_0, 
+            eta_min=float(cfg.train_param.min_lr)
+        )
+    elif SCHEDULER_LIST[cfg.model_param.scheduler] == 'None':
         return None
         
     return scheduler
