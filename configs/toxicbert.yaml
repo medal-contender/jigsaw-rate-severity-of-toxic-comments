@@ -1,5 +1,5 @@
 program_param:
-  wandb_key: 27b98c412ec8a5a4e2a7433293569c9122e88fab
+  wandb_key: 
   project_name: jigsaw
   seed: 42
 
