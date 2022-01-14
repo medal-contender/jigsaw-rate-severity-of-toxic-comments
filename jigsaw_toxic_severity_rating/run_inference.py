@@ -61,6 +61,11 @@ if __name__ == '__main__':
         required=True,
         help="Type Name Of Config File To Use."
     )
+    parser.add_argument(
+        "--train", 
+        action='store_true',
+        help="Toggle On If Model Is On Training."
+    )
 
     args = parser.parse_args()
 

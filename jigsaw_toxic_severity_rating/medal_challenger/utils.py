@@ -72,7 +72,8 @@ class ConfigManager(object):
         self.cfg = self.load_yaml(args.config_file)
         self.cfg = munch.munchify(self.cfg)
         self.cfg.config_file = args.config_file
-        
+        if args.train:
+            self.cfg.training_keyword = args.training_keyword
 
     def load_yaml(self,file_path):
         with open(file_path, "r", encoding="utf-8") as f:

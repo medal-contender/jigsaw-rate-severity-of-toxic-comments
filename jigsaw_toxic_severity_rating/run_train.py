@@ -83,7 +83,7 @@ def run_training(
             best_epoch_loss = val_epoch_loss
             run.summary["Best Loss"] = best_epoch_loss
             best_model_wts = copy.deepcopy(model.state_dict())
-            PATH = f"{save_dir}/[{cfg.training_keyword.upper()}]_Scheduler_{cfg.model_param.scheduler}_Fold_{fold}_Epoch_{epoch}_Loss_{best_epoch_loss:.4f}.bin"
+            PATH = f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.bin"
             # 모델 저장
             torch.save(model.state_dict(), PATH)
             print(f"Model Saved{reset_all}")
@@ -198,6 +198,11 @@ if __name__ == '__main__':
         type=str, 
         required=True,
         help="Type Name Of Config File To Use."
+    )
+    parser.add_argument(
+        "--train", 
+        action='store_true',
+        help="Toggle On If Model Is On Training."
     )
     parser.add_argument(
         "--training-keyword", 
