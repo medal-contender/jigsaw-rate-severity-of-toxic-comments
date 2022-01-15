@@ -9,8 +9,10 @@ import numpy as np
 import torch
 from transformers import AutoTokenizer, AdamW
 from collections import defaultdict
-from medal_challenger.utils import id_generator, set_seed, get_dataframe, get_folded_dataframe
-from medal_challenger.configs import BERT_MODEL_LIST, SCHEDULER_LIST
+from medal_challenger.utils import (
+    id_generator, set_seed, get_dataframe, get_folded_dataframe, ConfigManager
+)
+from medal_challenger.configs import BERT_MODEL_LIST
 from medal_challenger.dataset import prepare_loaders
 from medal_challenger.model import JigsawModel, fetch_scheduler
 from medal_challenger.train import train_one_epoch, valid_one_epoch
@@ -30,14 +32,12 @@ def run_training(
         model, 
         optimizer, 
         scheduler, 
-        device, 
-        num_epochs, 
         fold,
         save_dir,
         train_loader,
         valid_loader,
         run,
-        CONFIG,
+        cfg,
     ):
 
     # 자동으로 Gradients를 로깅
@@ -51,24 +51,23 @@ def run_training(
     best_epoch_loss = np.inf
     history = defaultdict(list)
     
-    for epoch in range(1, num_epochs + 1): 
+    for epoch in range(1, cfg.train_param.epochs + 1): 
         gc.collect()
         train_epoch_loss = train_one_epoch(
                                 model, 
                                 optimizer, 
                                 scheduler, 
                                 dataloader=train_loader, 
-                                device=device, 
                                 epoch=epoch,
-                                CONFIG=CONFIG,
+                                cfg=cfg,
                             )
         
         val_epoch_loss = valid_one_epoch(
                             model, 
                             valid_loader, 
-                            device=device, 
+                            device=cfg.model_param.device, 
                             epoch=epoch,
-                            margin=CONFIG['margin']
+                            margin=cfg.train_param.ranking_margin
                         )
     
         history['Train Loss'].append(train_epoch_loss)
@@ -84,7 +83,7 @@ def run_training(
             best_epoch_loss = val_epoch_loss
             run.summary["Best Loss"] = best_epoch_loss
             best_model_wts = copy.deepcopy(model.state_dict())
-            PATH = f"{save_dir}/Loss-Fold-{fold}.bin"
+            PATH = f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.bin"
             # 모델 저장
             torch.save(model.state_dict(), PATH)
             print(f"Model Saved{reset_all}")
@@ -103,96 +102,84 @@ def run_training(
     return model, history
 
 
-def main(args):
+def main(cfg):
+ 
+    cfg.tokenizer = AutoTokenizer.from_pretrained(
+        f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}"
+    )
+    cfg.group = f'{cfg.program_param.project_name}.{cfg.model_param.model_name}.{cfg.training_keyword}'
 
-    # TODO: Config로 받을지 Args로 받을지 결정해야 함 
+    if "deberta" in cfg.model_param.model_name:
+        cfg.train_param.batch_size = int(cfg.train_param.batch_size/2)
+        cfg.valid_param.batch_size = int(cfg.valid_param.batch_size/2)
+    wandb.login(key=cfg.program_param.wandb_key)
 
-    # Args로 Config 설정
-    CONFIG = {
-        "seed": args.seed, 
-        "epochs": args.epochs, 
-        "model_name": BERT_MODEL_LIST[args.model_name],
-        "train_batch_size": args.train_batch_size,
-        "valid_batch_size": args.valid_batch_size,
-        "test_batch_size": args.test_batch_size,
-        "max_length": args.max_length,
-        "learning_rate": args.learning_rate,
-        "scheduler": SCHEDULER_LIST[args.scheduler],
-        "min_lr": args.min_lr,
-        "T_max": args.T_max,
-        "weight_decay": args.weight_decay,
-        "n_fold": args.n_fold, 
-        "n_accumulate": args.n_accumulate,
-        "num_classes": args.num_classes,
-        "margin": args.margin,
-        "device": torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-        "hash_name": args.hash_name
-    }
-    print(os.getcwd())
-    CONFIG["tokenizer"] = AutoTokenizer.from_pretrained(f"../models/{CONFIG['model_name']}")
-    CONFIG['group'] = f'{args.hash_name}-{args.model_name}-Baseline'
-
-    if "deberta" in CONFIG['model_name']:
-        CONFIG['train_batch_size'] = int(CONFIG['train_batch_size']/2)
-        CONFIG['valid_batch_size'] = int(CONFIG['valid_batch_size']/2)
-        CONFIG['test_batch_size'] = int(CONFIG['test_batch_size']/2)
-    wandb.login(key=args.wandb_key)
-
-    set_seed(CONFIG['seed'])
+    set_seed(cfg.program_param.seed)
 
     HASH_NAME = id_generator(size=12)
 
     # 모델 저장 경로 
-    root_save_dir = './trained'
-    save_dir = os.path.join(root_save_dir,CONFIG['model_name'],CONFIG['scheduler'])
+    root_save_dir = '/jigsaw/checkpoint'
+    save_dir = os.path.join(root_save_dir,cfg.model_param.model_name)
     os.makedirs(save_dir,exist_ok=True)
 
     # 데이터 경로 
-    root_data_dir = '../input/jigsaw-toxic-severity-rating'
-    train_csv = os.path.join(root_data_dir,'validation_data.csv')   
-    test_csv = os.path.join(root_data_dir,'comments_to_score.csv')
-    submission_csv = os.path.join(root_data_dir,'sample_submission.csv')
+    root_data_dir = '../input/'+cfg.data_param.dir_name.replace("_","-")
+    train_csv = os.path.join(root_data_dir,cfg.data_param.train_file_name)   
     
     # 데이터프레임
     train_df = get_dataframe(train_csv)
-    test_df = get_dataframe(test_csv)
-    submission_df = get_dataframe(submission_csv)
 
     # K Fold
-    train_df = get_folded_dataframe(train_df, CONFIG['n_fold'], CONFIG['seed'])
+    train_df = get_folded_dataframe(train_df, cfg.train_param.num_folds, cfg.program_param.seed)
 
     # 학습 진행
+    for fold in range(0, cfg.train_param.num_folds):
 
-    for fold in range(0, CONFIG['n_fold']):
         print(f"{yellow_font}====== Fold: {fold} ======{reset_all}")
-        run = wandb.init(project='Jigsaw', 
-                        config=CONFIG,
-                        job_type='Train',
-                        group=CONFIG['group'],
-                        tags=['roberta-base', f'{HASH_NAME}', 'margin-loss'],
-                        name=f'{HASH_NAME}-fold-{fold}',
-                        anonymous='must')
+
+        run = wandb.init(
+            project=cfg.program_param.project_name, 
+            config=cfg,
+            job_type='Train',
+            group=cfg.group,
+            tags=[
+                cfg.model_param.model_name, HASH_NAME, cfg.train_param.loss
+            ],
+            name=f'{HASH_NAME}-fold-{fold}',
+            anonymous='must'
+        )
         
-        train_loader, valid_loader = prepare_loaders(train_df,CONFIG,fold,True)
+        train_loader, valid_loader = prepare_loaders(
+            train_df,
+            cfg,
+            fold,
+            is_train=True
+        )
         
-        model = JigsawModel(f"../models/{CONFIG['model_name']}",CONFIG['num_classes'])
-        model.to(CONFIG['device'])
+        model = JigsawModel(
+            f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}",
+            cfg.model_param.num_classes
+        )
+        model.to(cfg.model_param.device)
         
-        optimizer = AdamW(model.parameters(), lr=CONFIG['learning_rate'], weight_decay=CONFIG['weight_decay'])
-        scheduler = fetch_scheduler(optimizer,CONFIG)
+        optimizer = AdamW(
+            model.parameters(), 
+            lr=float(cfg.train_param.lr), 
+            weight_decay=float(cfg.train_param.weight_decay)
+        )
+        scheduler = fetch_scheduler(optimizer,cfg)
         
         model, history = run_training(
                             model, 
                             optimizer, 
                             scheduler,
-                            device=CONFIG['device'],
-                            num_epochs=CONFIG['epochs'],
                             fold=fold,
                             save_dir=save_dir,
                             train_loader=train_loader,
                             valid_loader=valid_loader,
                             run=run,
-                            CONFIG=CONFIG,
+                            cfg=cfg,
                         )
         
         run.finish()
@@ -205,120 +192,26 @@ def main(args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
+
     parser.add_argument(
-        "--wandb-key", 
+        "--config-file", 
         type=str, 
-        default='', 
-        help='Type Authentication Key For WANDB.'
+        required=True,
+        help="Type Name Of Config File To Use."
     )
     parser.add_argument(
-        "--hash-name", 
+        "--train", 
+        action='store_true',
+        help="Toggle On If Model Is On Training."
+    )
+    parser.add_argument(
+        "--training-keyword", 
         type=str, 
-        default='jigsaw', 
-        help='Type Name Of Your Project For WANDB.'
-    )
-    parser.add_argument(
-        "--model-name", 
-        choices=[
-            "hatebert","roberta","distilbert","electra","luke",
-            "deberta","bigbird_roberta","t5","bert","toxicbert",
-        ], 
-        default='bert', 
-        help='Select Model From ["hatebert","roberta","distilbert","electra","luke","deberta","bigbird_roberta","t5","bert","toxicbert",].'
-    )
-    parser.add_argument(
-        "--scheduler", 
-        choices=[
-            "cos_ann","cos_ann_warm","none",
-        ], 
-        default='none', 
-        help='Select Scheduler From ["cos_ann","cos_ann_warm","none"].'
-    )
-    parser.add_argument(
-        '--max-length', 
-        type=int, 
-        default=128,
-        help="Type The Maximum Length Of Sequnce."
-    )
-    parser.add_argument(
-        '--epochs', 
-        type=int, 
-        default=10,
-        help="Type The Number Of Epochs For Training."
-    )
-    parser.add_argument(
-        '--learning-rate', 
-        type=float, 
-        default=1e-4,
-        help="Type Learning Rate For Training."
-    )
-    parser.add_argument(
-        '--seed', 
-        type=int, 
-        default=42,
-        help="Type Seed For Program."
-    )
-    parser.add_argument(
-        '--min-lr', 
-        type=float, 
-        default=1e-6,
-        help="Type The Minimum Learning Rate For Training."
-    )
-    parser.add_argument(
-        '--T-max', 
-        type=int, 
-        default=500,
-        help="Type The Maximum Number Of Iterations For One Cycle."
-    )
-    parser.add_argument(
-        '--weight-decay', 
-        type=float, 
-        default=1e-6,
-        help="Type Weight Decay Value."
-    )
-    parser.add_argument(
-        '--n-fold', 
-        type=int, 
-        default=2,
-        help="Type The Number Of Folds."
-    )
-    parser.add_argument(
-        '--n-accumulate', 
-        type=int, 
-        default=1,
-        help="Type The Size Of Step Stack."
-    )
-    parser.add_argument(
-        '--num-classes', 
-        type=int, 
-        default=1,
-        help="Type The Number Of Classes."
-    )
-    parser.add_argument(
-        '--margin', 
-        type=float, 
-        default=0.5,
-        help="Type Margin Value For Loss Function."
-    )
-    parser.add_argument(
-        '--train-batch-size', 
-        type=int, 
-        default=16,
-        help="Type Train Batch Size."
-    )
-    parser.add_argument(
-        '--valid-batch-size', 
-        type=int, 
-        default=64,
-        help="Type Validation Batch Size."
-    )
-    parser.add_argument(
-        '--test-batch-size', 
-        type=int, 
-        default=64,
-        help="Type Test Batch Size."
+        default='hyperparameter_tuning',
+        help="Type Keyword Of This Training."
     )
 
     args = parser.parse_args()
 
-    main(args)
+    cfg = ConfigManager(args).cfg
+    main(cfg)

@@ -1,9 +1,12 @@
-import numpy as np
 import random
 import torch
 import string
+import munch
+import yaml
 import os
+import numpy as np
 import pandas as pd
+from glob import glob
 from sklearn.model_selection import StratifiedKFold, KFold
 
 def set_seed(seed = 42):
@@ -46,3 +49,35 @@ def get_folded_dataframe(df,n_splits,random_state,shuffle=True):
     df["kfold"] = df["kfold"].astype(int)
 
     return df
+
+def get_best_model(save_dir):
+
+    model_list = glob(save_dir + '/*.bin')
+    best_loss = float("inf")
+    best_model = None
+
+    for model in model_list:
+        loss = float(model.split('_')[-1][:-4])
+        if loss <= best_loss:
+            best_loss = loss
+            best_model = model
+    
+    return best_model
+
+class ConfigManager(object):
+
+    def __init__(self, args):
+
+        self.config_file = args.config_file
+        self.cfg = self.load_yaml(args.config_file)
+        self.cfg = munch.munchify(self.cfg)
+        self.cfg.config_file = args.config_file
+        if args.train:
+            self.cfg.training_keyword = args.training_keyword
+
+    def load_yaml(self,file_path):
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = yaml.full_load(f)
+
+        return data
+
