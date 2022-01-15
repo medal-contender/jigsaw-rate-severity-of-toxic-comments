@@ -67,7 +67,7 @@ Pytorch version may vary depanding on your hardware configurations.
 git clone https://github.com/medal-challenger/jigsaw-rate-severity-of-toxic-comments.git
 conda create -n jigsaw python=3.8
 activate jigsaw
-# PyTorch installation process may vary depends on your hardware
+# PyTorch installation process may vary depending on your hardware
 conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 cd jigsaw-rate-severity-of-toxic-comments
 pip install -r requirements.txt
