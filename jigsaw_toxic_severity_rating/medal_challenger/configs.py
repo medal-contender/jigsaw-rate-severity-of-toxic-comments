@@ -9,7 +9,8 @@ BERT_MODEL_LIST = {
     "bigbird_roberta": "bigbird-roberta-base",
     "t5": "t5-base",
     "bert": "bert-base-cased",
-    "toxicbert": "toxic-bert"
+    "toxicbert": "toxic-bert",
+    "toxic-roberta": "unbiased-toxic-roberta"
 }
 
 SCHEDULER_LIST = {

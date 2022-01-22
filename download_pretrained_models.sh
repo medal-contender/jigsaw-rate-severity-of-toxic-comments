@@ -56,4 +56,9 @@ cd ./toxic-bert
 GIT_LFS_SKIP_SMUDGE=1
 cd ..
 
+# Toxic RoBERTa
+git clone https://huggingface.co/unitary/unbiased-toxic-roberta
+cd ./unbiased-toxic-roberta
+GIT_LFS_SKIP_SMUDGE=1
+cd ..
 

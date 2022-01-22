@@ -15,7 +15,7 @@ from medal_challenger.utils import (
 from medal_challenger.configs import BERT_MODEL_LIST
 from medal_challenger.dataset import prepare_loaders
 from medal_challenger.model import JigsawModel, fetch_scheduler
-from medal_challenger.train import train_one_epoch, valid_one_epoch
+from medal_challenger.train import train_one_epoch, valid_one_epoch, score_one_epoch
 from colorama import Fore, Style
 
 blue_font = Fore.BLUE
@@ -37,7 +37,7 @@ def run_training(
         train_loader,
         valid_loader,
         run,
-        cfg,
+        cfg
     ):
 
     # 자동으로 Gradients를 로깅
@@ -63,12 +63,20 @@ def run_training(
                             )
         
         val_epoch_loss = valid_one_epoch(
-                            model, 
-                            valid_loader, 
-                            device=cfg.model_param.device, 
-                            epoch=epoch,
-                            margin=cfg.train_param.ranking_margin
-                        )
+                                model, 
+                                valid_loader, 
+                                device=cfg.model_param.device, 
+                                epoch=epoch,
+                                margin=cfg.train_param.ranking_margin
+                            )
+
+        if cfg.data_param.do_score_check:
+            preds, score = score_one_epoch(
+                                model, 
+                                cfg
+                            )
+            print(f"Validation Score: {score}")
+            
     
         history['Train Loss'].append(train_epoch_loss)
         history['Valid Loss'].append(val_epoch_loss)
@@ -76,6 +84,8 @@ def run_training(
         # Loss 로깅
         wandb.log({"Train Loss": train_epoch_loss})
         wandb.log({"Valid Loss": val_epoch_loss})
+        wandb.log({"Valid Score": score})
+        wandb.log({"Valid Pred": preds})
         
         # 베스트 모델 저장
         if val_epoch_loss <= best_epoch_loss:
