@@ -5,13 +5,13 @@ program_param:
 
 data_param:
   dir_name: jigsaw-toxic-severity-rating
-  train_file_name: validation_data.csv
+  train_file_name: added_data.csv
   infer_file_name: comments_to_score.csv
   valid_file_name: toxic_task.csv
   do_score_check: True
 
 model_param:
-  model_name: distilbert
+  model_name: toxic-roberta
   max_length: 128
   scheduler: cos_ann
   mix_precision: True
@@ -29,7 +29,7 @@ train_param:
   batch_size: 16
   T_max: 500
   T_0: 50
-  save_dir: checkpoint/distilbert
+  save_dir: checkpoint/toxic-roberta
   loss: margin_ranking_loss
   num_workers: 2
   shuffle: True
@@ -47,5 +47,5 @@ infer_param:
   num_workers: 2
   shuffle: False
   pin_memory: True
-  checkpoint_path: checkpoint/distilbert/distilbert.bin
-  save_dir: /jigsaw/output/distilbert
+  checkpoint_path: checkpoint/toxic-roberta/toxic-roberta.bin
+  save_dir: /jigsaw/output/toxic-roberta

@@ -1,12 +1,14 @@
 program_param:
-  wandb_key: 
+  wandb_key: 27b98c412ec8a5a4e2a7433293569c9122e88fab
   project_name: jigsaw
   seed: 42
 
 data_param:
-  dir_name: jigsaw_toxic_severity_rating
+  dir_name: jigsaw-toxic-severity-rating
   train_file_name: validation_data.csv
   infer_file_name: comments_to_score.csv
+  valid_file_name: toxic_task.csv
+  do_score_check: True
 
 model_param:
   model_name: toxicbert
@@ -17,7 +19,7 @@ model_param:
   device: cuda
 
 train_param:
-  epochs: 7
+  epochs: 4
   lr: 1e-4
   min_lr: 1e-6
   weight_decay: 1e-6
