@@ -1,14 +1,14 @@
 program_param:
-  wandb_key: 27b98c412ec8a5a4e2a7433293569c9122e88fab
+  wandb_key: 
   project_name: jigsaw
   seed: 42
 
 data_param:
   dir_name: jigsaw-toxic-severity-rating
-  train_file_name: validation_data.csv
+  train_file_name: added_data.csv
   infer_file_name: comments_to_score.csv
   valid_file_name: toxic_task.csv
-  do_score_check: True
+  do_score_check: False
 
 model_param:
   model_name: bert
