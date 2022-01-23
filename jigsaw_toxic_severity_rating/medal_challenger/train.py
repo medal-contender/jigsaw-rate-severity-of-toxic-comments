@@ -1,8 +1,14 @@
+import os
 import gc
 import torch
 import torch.nn as nn
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
+from medal_challenger.dataset import prepare_loaders
 from torch.cuda.amp import autocast, GradScaler
+
+from medal_challenger.dataset import JigsawDataset
 
 def criterion(outputs1, outputs2, targets, margin):
     '''
@@ -152,3 +158,34 @@ def valid_one_epoch(
     gc.collect()
     
     return epoch_loss
+
+@torch.no_grad()
+def score_one_epoch(model,cfg):
+    model.eval()
+    score_csv = os.path.join(
+                    '../input',
+                    cfg.data_param.dir_name,
+                    cfg.data_param.valid_file_name
+                )
+    df = pd.read_csv(score_csv)
+    dataloader = prepare_loaders(df, cfg, is_train=False)
+    
+    PREDS = []
+    
+    bar = tqdm(enumerate(dataloader), total=len(dataloader))
+    for step, data in bar:
+        ids = data['ids'].to(cfg.model_param.device, dtype = torch.long)
+        mask = data['mask'].to(cfg.model_param.device, dtype = torch.long)
+        
+        outputs = model(ids, mask)
+        PREDS.append(outputs.view(-1).cpu().detach().numpy()) 
+    
+    PREDS = np.concatenate(PREDS)
+    gc.collect()
+
+    df['pred'] = PREDS
+    score_df = df.sort_values(by='score').reset_index(drop=True)
+    pred_df = df.sort_values(by='pred').reset_index(drop=True)
+    score = (score_df['text']==pred_df['text']).sum()/len(df)
+
+    return PREDS, score
