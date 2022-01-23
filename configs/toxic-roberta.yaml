@@ -17,6 +17,7 @@ model_param:
   mix_precision: True
   num_classes: 1
   device: cuda
+  drop_p: 0.2
 
 train_param:
   epochs: 4

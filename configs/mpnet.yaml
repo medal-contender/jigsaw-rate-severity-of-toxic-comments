@@ -11,9 +11,9 @@ data_param:
   do_score_check: False
 
 model_param:
-  model_name: hatebert
+  model_name: mpnet
   max_length: 128
-  scheduler: cos_ann
+  scheduler: cos_ann_warm
   mix_precision: True
   num_classes: 1
   device: cuda
@@ -25,28 +25,28 @@ train_param:
   min_lr: 1e-6
   weight_decay: 1e-6
   num_folds: 5
-  accumulate_grad_batches: 2
+  accumulate_grad_batches: 3
   ranking_margin: 0.5
   batch_size: 16
   T_max: 500
   T_0: 50
-  save_dir: checkpoint/hatebert
+  save_dir: checkpoint/mpnet
   loss: margin_ranking_loss
-  num_workers: 2
+  num_workers: 6
   shuffle: True
   pin_memory: True
   drop_last: True
 
 valid_param:
   batch_size: 64
-  num_workers: 2
+  num_workers: 6
   shuffle: False
   pin_memory: True
   
 infer_param:
   batch_size: 64
-  num_workers: 2
+  num_workers: 6
   shuffle: False
   pin_memory: True
-  checkpoint_path: checkpoint/hatebert/hatebert.bin
-  save_dir: /jigsaw/output/hatebert
+  checkpoint_path: checkpoint/mpnet/roberta.bin
+  save_dir: /jigsaw/output/mpnet
