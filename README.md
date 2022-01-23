@@ -43,7 +43,7 @@ $ sh ./download_pretrained_models.sh
 ```shell
 $ cd /jigsaw-toxic-severity-rating/jigsaw_toxic_severity_rating
 $ python3 run_train.py \
-          "--config-file", "/jigsaw/configs/roberta.yaml", \
+          "--config-file", "/jigsaw-toxic-severity-rating/configs/roberta.yaml", \
           "--train", \
           "--training-keyword", "roberta-test"
 ```
