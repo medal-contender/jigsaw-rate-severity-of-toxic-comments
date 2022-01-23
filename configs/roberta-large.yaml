@@ -38,13 +38,13 @@ train_param:
   drop_last: True
 
 valid_param:
-  batch_size: 32
+  batch_size: 16
   num_workers: 6
   shuffle: False
   pin_memory: True
   
 infer_param:
-  batch_size: 32
+  batch_size: 16
   num_workers: 6
   shuffle: False
   pin_memory: True

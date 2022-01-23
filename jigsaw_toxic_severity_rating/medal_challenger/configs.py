@@ -3,6 +3,8 @@ BERT_MODEL_LIST = {
     "hatebert": "hateBERT",
     "roberta": "roberta-base",
     "roberta-large": "roberta-large",
+    "funnel": "large",
+    "muppet": "muppet-roberta-base",
     "distilbert": "distilbert-base-cased",
     "electra": "electra-base-discriminator",
     "luke": "luke-base",

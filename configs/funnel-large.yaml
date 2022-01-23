@@ -11,7 +11,7 @@ data_param:
   do_score_check: False
 
 model_param:
-  model_name: roberta
+  model_name: funnel-large
   max_length: 128
   scheduler: cos_ann_warm
   mix_precision: True
@@ -25,12 +25,12 @@ train_param:
   min_lr: 1e-6
   weight_decay: 1e-6
   num_folds: 5
-  accumulate_grad_batches: 3
+  accumulate_grad_batches: 4
   ranking_margin: 0.5
-  batch_size: 16
+  batch_size: 4
   T_max: 500
   T_0: 50
-  save_dir: checkpoint/roberta
+  save_dir: checkpoint/funnel-large
   loss: margin_ranking_loss
   num_workers: 6
   shuffle: True
@@ -38,15 +38,15 @@ train_param:
   drop_last: True
 
 valid_param:
-  batch_size: 64
+  batch_size: 16
   num_workers: 6
   shuffle: False
   pin_memory: True
   
 infer_param:
-  batch_size: 64
+  batch_size: 16
   num_workers: 6
   shuffle: False
   pin_memory: True
-  checkpoint_path: checkpoint/roberta/roberta.bin
-  save_dir: /jigsaw/output/roberta
+  checkpoint_path: checkpoint/funnel-large/roberta.bin
+  save_dir: /jigsaw/output/funnel-large
