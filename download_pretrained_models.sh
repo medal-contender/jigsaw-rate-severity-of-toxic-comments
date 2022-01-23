@@ -9,10 +9,14 @@ git clone https://huggingface.co/GroNLP/hateBERT
 cd ./hateBERT
 GIT_LFS_SKIP_SMUDGE=1
 cd ..
-# RoBERTa
-
+# RoBERTa-Base
 git clone https://huggingface.co/roberta-base
 cd ./roberta-base
+GIT_LFS_SKIP_SMUDGE=1
+cd ..
+# RoBERTa-Large
+git clone https://huggingface.co/roberta-large
+cd ./roberta-large
 GIT_LFS_SKIP_SMUDGE=1
 cd ..
 # DistilBERT
@@ -55,10 +59,23 @@ git clone https://huggingface.co/unitary/toxic-bert
 cd ./toxic-bert
 GIT_LFS_SKIP_SMUDGE=1
 cd ..
-
 # Toxic RoBERTa
 git clone https://huggingface.co/unitary/unbiased-toxic-roberta
 cd ./unbiased-toxic-roberta
 GIT_LFS_SKIP_SMUDGE=1
 cd ..
-
+# Funnel
+git clone https://huggingface.co/funnel-transformer/intermediate
+cd ./intermediate
+GIT_LFS_SKIP_SMUDGE=1
+cd ..
+# Muppet RoBERTa
+git clone https://huggingface.co/facebook/muppet-roberta-base
+cd ./muppet-roberta-base
+GIT_LFS_SKIP_SMUDGE=1
+cd ..
+# MPNet
+git clone https://huggingface.co/sentence-transformers/all-mpnet-base-v2
+cd ./all-mpnet-base-v2
+GIT_LFS_SKIP_SMUDGE=1
+cd ..
