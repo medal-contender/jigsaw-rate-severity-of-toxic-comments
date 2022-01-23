@@ -95,7 +95,6 @@ def run_training(
             print(f"{blue_font}Validation Loss Improved ({best_epoch_loss} ---> {val_epoch_loss})")
             best_epoch_loss = val_epoch_loss
             # 이전 베스트 모델 삭제
-            model_path = glob(f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}*")
             if best_file is None:
                 best_file = f'{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.bin'
             else:
@@ -180,7 +179,8 @@ def main(cfg):
         
         model = JigsawModel(
             f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}",
-            cfg.model_param.num_classes
+            cfg.model_param.num_classes,
+            cfg.model_param.drop_p,
         )
         model.to(cfg.model_param.device)
         
