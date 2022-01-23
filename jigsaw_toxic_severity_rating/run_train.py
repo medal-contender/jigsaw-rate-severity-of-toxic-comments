@@ -7,6 +7,7 @@ import copy
 import argparse
 import numpy as np
 import torch
+from glob import glob
 from transformers import AutoTokenizer, AdamW
 from collections import defaultdict
 from medal_challenger.utils import (
@@ -50,6 +51,7 @@ def run_training(
     best_model_wts = copy.deepcopy(model.state_dict())
     best_epoch_loss = np.inf
     history = defaultdict(list)
+    best_file = None
     
     for epoch in range(1, cfg.train_param.epochs + 1): 
         gc.collect()
@@ -84,13 +86,22 @@ def run_training(
         # Loss 로깅
         wandb.log({"Train Loss": train_epoch_loss})
         wandb.log({"Valid Loss": val_epoch_loss})
-        wandb.log({"Valid Score": score})
-        wandb.log({"Valid Pred": preds})
+        if cfg.data_param.do_score_check:
+            wandb.log({"Valid Score": score})
+            wandb.log({"Valid Pred": preds})
         
         # 베스트 모델 저장
         if val_epoch_loss <= best_epoch_loss:
             print(f"{blue_font}Validation Loss Improved ({best_epoch_loss} ---> {val_epoch_loss})")
             best_epoch_loss = val_epoch_loss
+            # 이전 베스트 모델 삭제
+            model_path = glob(f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}*")
+            if best_file is None:
+                best_file = f'{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.bin'
+            else:
+                os.remove(best_file)
+                best_file = f'{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.bin'
+            
             run.summary["Best Loss"] = best_epoch_loss
             best_model_wts = copy.deepcopy(model.state_dict())
             PATH = f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.bin"
