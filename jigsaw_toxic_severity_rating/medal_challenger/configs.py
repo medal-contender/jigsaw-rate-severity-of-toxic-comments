@@ -15,6 +15,7 @@ BERT_MODEL_LIST = {
     "toxicbert": "toxic-bert",
     "toxic-roberta": "unbiased-toxic-roberta",
     "mpnet": "all-mpnet-base-v2",
+    "distilbart": "distilbart-cnn-6-6-large"
 }
 
 SCHEDULER_LIST = {

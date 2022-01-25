@@ -79,3 +79,9 @@ git clone https://huggingface.co/sentence-transformers/all-mpnet-base-v2
 cd ./all-mpnet-base-v2
 GIT_LFS_SKIP_SMUDGE=1
 cd ..
+# DistilBART
+git clone https://huggingface.co/sshleifer/distilbart-cnn-6-6
+mv ./distilbart-cnn-6-6 ./distilbart-cnn-6-6-large
+cd ./distilbart-cnn-6-6-large
+GIT_LFS_SKIP_SMUDGE=1
+cd ..
