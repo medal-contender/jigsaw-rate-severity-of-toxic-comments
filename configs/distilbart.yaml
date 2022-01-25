@@ -5,19 +5,19 @@ program_param:
 
 data_param:
   dir_name: jigsaw-toxic-severity-rating
-  train_file_name: added_data.csv
+  train_file_name: merged_task_comment_ruddit_df.csv
   infer_file_name: comments_to_score.csv
   valid_file_name: toxic_task.csv
   do_score_check: False
 
 model_param:
-  model_name: hatebert
+  model_name: distilbart
   max_length: 128
-  scheduler: cos_ann
+  scheduler: cos_ann_warm
   mix_precision: True
   num_classes: 1
   device: cuda
-  drop_p: 0.2
+  drop_p: 0.1
 
 train_param:
   epochs: 4
@@ -25,28 +25,28 @@ train_param:
   min_lr: 1e-6
   weight_decay: 1e-6
   num_folds: 5
-  accumulate_grad_batches: 2
+  accumulate_grad_batches: 4
   ranking_margin: 0.5
   batch_size: 16
   T_max: 500
   T_0: 50
-  save_dir: checkpoint/hatebert
+  save_dir: checkpoint/distilbart
   loss: margin_ranking_loss
-  num_workers: 2
+  num_workers: 6
   shuffle: True
   pin_memory: True
   drop_last: True
 
 valid_param:
   batch_size: 64
-  num_workers: 2
+  num_workers: 6
   shuffle: False
   pin_memory: True
   
 infer_param:
   batch_size: 64
-  num_workers: 2
+  num_workers: 6
   shuffle: False
   pin_memory: True
-  checkpoint_path: checkpoint/hatebert/hatebert.bin
-  save_dir: /jigsaw/output/hatebert
+  checkpoint_path: checkpoint/distilbart/roberta.bin
+  save_dir: /jigsaw/output/distilbart

@@ -41,11 +41,11 @@ $ sh ./download_pretrained_models.sh
 
 - Train
 ```shell
-$ python3 ~~~
-```
-- Inference
-```shell
-$ python3 ~~~
+$ cd /jigsaw-toxic-severity-rating/jigsaw_toxic_severity_rating
+$ python3 run_train.py \
+          "--config-file", "/jigsaw-toxic-severity-rating/configs/roberta.yaml", \
+          "--train", \
+          "--training-keyword", "roberta-test"
 ```
 
 ## Requirements

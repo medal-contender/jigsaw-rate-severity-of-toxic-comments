@@ -5,7 +5,7 @@ program_param:
 
 data_param:
   dir_name: jigsaw-toxic-severity-rating
-  train_file_name: added_data.csv
+  train_file_name: task_predicted_halfSTD.csv
   infer_file_name: comments_to_score.csv
   valid_file_name: toxic_task.csv
   do_score_check: False
@@ -25,9 +25,9 @@ train_param:
   min_lr: 1e-6
   weight_decay: 1e-6
   num_folds: 5
-  accumulate_grad_batches: 3
+  accumulate_grad_batches: 2
   ranking_margin: 0.5
-  batch_size: 16
+  batch_size: 32
   T_max: 500
   T_0: 50
   save_dir: checkpoint/muppet
