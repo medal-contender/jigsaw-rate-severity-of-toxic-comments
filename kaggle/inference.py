@@ -1,4 +1,3 @@
-# TODO: 경로 설정해야할 부분: 1. 모델경로, 2. bin파일 경로
 import os
 import gc
 import random
@@ -44,6 +43,11 @@ CONFIG = dict(
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
 )
 
+ensemble_key = {
+    'deberta': 1.1,
+    'roberta': 1.2,
+    'muppet': 0.9,
+}
 
 def set_seed(seed = 42):
     '''Sets the seed of the entire notebook so results are the same every time we run.
@@ -82,11 +86,18 @@ def valid_fn(model, textloader, device):
 def inference(model_paths, textloader, device):
     final_preds = []
     for i, path in enumerate(model_paths):
+
+        model_keyword = os.path.basename(path).split('_')[0][1:-1]
+        assert model_keyword in ensemble_key, f"Model File Should Contain A Keyword Predifined In Ensemble Key"
+        model_value = ensemble_key[model_keyword]
+
         model = torch.load(path)
         model.to(CONFIG['device'])
         
         print(f"Getting predictions for model {i+1}")
         preds = valid_fn(model, textloader, device)
+        # Weight On Predictions
+        preds *= model_value
         final_preds.append(preds)
     
         del model
