@@ -1,7 +1,6 @@
 # TODO: 경로 설정해야할 부분: 1. 모델경로, 2. bin파일 경로
 import os
 import gc
-import cv2
 import copy
 import time
 import random
@@ -22,11 +21,8 @@ from transformers import AutoTokenizer, AutoModel
 from tqdm import tqdm
 import pathlib
 
-import nltk
 import re
 from bs4 import BeautifulSoup
-from tqdm import tqdm
-from nltk.corpus import stopwords
 
 # For descriptive error messages
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
@@ -162,13 +158,6 @@ def inference(model_paths, dataloader, device):
     final_preds = np.mean(final_preds, axis=0)
     return final_preds
 
-
-stop = stopwords.words('english')
-lemmatizer = nltk.stem.WordNetLemmatizer()
-
-def lemmatize_text(text):
-    return [lemmatizer.lemmatize(w) for w in text]
-
 def clean(data):
     
     data = data.replace(r"what's", "what is ")    
@@ -223,8 +212,7 @@ set_seed(CONFIG['seed'])
 df = pd.read_csv("../input/jigsaw-toxic-severity-rating/comments_to_score.csv")
 df['text'] = df['text'].apply(lambda x: clean(x))
 df['text'] = df['text'].apply(lambda x: text_cleaning(x))
-df['text'] = df['text'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop)]))
-df.head()
+
 
 test_dataset = JigsawDataset(df, CONFIG['tokenizer'], max_length=CONFIG['max_length'])
 test_loader = DataLoader(test_dataset, batch_size=CONFIG['test_batch_size'],
