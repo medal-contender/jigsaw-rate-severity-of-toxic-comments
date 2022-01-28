@@ -20,7 +20,7 @@ from transformers import AutoTokenizer, AutoModel
 # Utils
 from tqdm import tqdm
 import pathlib
-import re
+from glob import glob
 
 # For descriptive error messages
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
