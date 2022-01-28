@@ -8,7 +8,7 @@ import pandas as pd
 
 # Pytorch Imports
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
 
 # For Transformer Models
 from transformers import AutoTokenizer
@@ -17,37 +17,60 @@ from transformers import AutoTokenizer
 from tqdm import tqdm
 from glob import glob
 import sys
-sys.path.append('/jigsaw/jigsaw_toxic_severity_rating')
-from medal_challenger.dataset import JigsawDataset 
+sys.path.insert(0, '../input/medalchallengerrepo/jigsaw-rate-severity-of-toxic-comments-develop/jigsaw_toxic_severity_rating/')
 
-import nltk
 import re
 from bs4 import BeautifulSoup
 from tqdm import tqdm
-from nltk.corpus import stopwords
 
 # For descriptive error messages
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 # pt파일 경로
-MODEL_WEIGHTS = glob('/jigsaw/checkpoint/deberta/*.pt')
-MODEL_DIR = '/jigsaw/models/deberta-v3-base'
+MODEL_WEIGHTS = glob('../input/roberta/roberta/*.pt')
+MODEL_DIR = '../input/models/roberta-base'
 
 CONFIG = dict(
     seed = 42,
     test_batch_size = 128,
     max_length = 128,
-    num_classes = 1,
-    dropout = 0.2,
     device = torch.device("cuda"),
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
 )
 
 ensemble_key = {
-    'deberta': 1.1,
+    'DEBERTA-BASE-DATA': 1.0,
     'roberta': 1.2,
     'muppet': 0.9,
 }
+
+class JigsawDataset(Dataset):
+    def __init__(self, df, tokenizer, max_length):
+        self.df = df
+        self.max_len = max_length
+        self.tokenizer = tokenizer
+        self.text = df['text'].values
+        
+    def __len__(self):
+        return len(self.df)
+    
+    def __getitem__(self, index):
+        text = self.text[index]
+        inputs = self.tokenizer.encode_plus(
+                        text,
+                        truncation=True,
+                        add_special_tokens=True,
+                        max_length=self.max_len,
+                        padding='max_length'
+                    )
+        
+        ids = inputs['input_ids']
+        mask = inputs['attention_mask']        
+        
+        return {
+            'ids': torch.tensor(ids, dtype=torch.long),
+            'mask': torch.tensor(mask, dtype=torch.long)
+        }    
 
 def set_seed(seed = 42):
     '''Sets the seed of the entire notebook so results are the same every time we run.

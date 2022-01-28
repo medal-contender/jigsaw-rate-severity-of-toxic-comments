@@ -104,7 +104,7 @@ def run_training(
             run.summary["Best Loss"] = best_epoch_loss
             PATH = f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.pt"
             # 모델 저장
-            torch.save(model, PATH)
+            torch.save(model,PATH)
             print(f"{red_font}Model Saved{reset_all}")
             
         print()

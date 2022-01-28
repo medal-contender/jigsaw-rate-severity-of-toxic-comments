@@ -21,5 +21,19 @@ BERT_MODEL_LIST = {
 SCHEDULER_LIST = {
     "cos_ann": 'CosineAnnealingLR',
     "cos_ann_warm": 'CosineAnnealingWarmRestarts',
+    "lambda":"LambdaLR",
+    "multiple":"MultiplicativeLR",
+    "step":"StepLR",
+    "mul-step":"MultiStepLR",
+    "exp":"ExponentialLR",
+    "rlrp":"ReduceLROnPlateau",
+    "clr":"CyclicLR",
+    "one-clr":"OneCycleLR",
     "none": 'None',
+}
+
+OPTIMIZER_LIST = {
+    'adamw': 'AdamW',
+    'bert': 'BertAdam',
+    'lamb': 'LAMB'
 }
