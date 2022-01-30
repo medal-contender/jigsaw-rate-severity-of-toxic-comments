@@ -18,14 +18,17 @@ model_param:
   num_classes: 1
   device: cuda
   drop_p: 0.1
+  is_extra_attn: True
+  is_deeper_attn: True
 
 train_param:
   epochs: 4
   lr: 1e-4
   min_lr: 1e-6
+  max_lr: 0.1
   weight_decay: 1e-6
   num_folds: 5
-  accumulate_grad_batches: 4
+  accumulate_grad_batches: 3
   ranking_margin: 0.5
   batch_size: 16
   T_max: 500
@@ -35,7 +38,15 @@ train_param:
   num_workers: 6
   shuffle: True
   pin_memory: True
-  drop_last: True
+  drop_last: False
+  reduce_ratio: 0.95
+  step_size: 10
+  gamma: 0.5 
+  milestones: [30,80]
+  base_lr: 5e-5
+  step_size_up: 5 
+  steps_per_epoch: 1000
+  is_skf: False
 
 valid_param:
   batch_size: 64

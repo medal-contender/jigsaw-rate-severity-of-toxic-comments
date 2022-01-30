@@ -5,13 +5,13 @@ program_param:
 
 data_param:
   dir_name: jigsaw-toxic-severity-rating
-  train_file_name: added_data.csv
+  train_file_name: Medal_Challenger_Jigsaw_dataset_v4.csv
   infer_file_name: comments_to_score.csv
   valid_file_name: toxic_task.csv
   do_score_check: False
 
 model_param:
-  model_name: funnel
+  model_name: deberta
   max_length: 128
   scheduler: cos_ann_warm
   mix_precision: True
@@ -33,7 +33,7 @@ train_param:
   batch_size: 16
   T_max: 500
   T_0: 50
-  save_dir: checkpoint/funnel
+  save_dir: checkpoint/deberta
   loss: margin_ranking_loss
   num_workers: 6
   shuffle: True
@@ -49,15 +49,15 @@ train_param:
   is_skf: False
 
 valid_param:
-  batch_size: 16
+  batch_size: 64
   num_workers: 6
   shuffle: False
   pin_memory: True
   
 infer_param:
-  batch_size: 16
+  batch_size: 64
   num_workers: 6
   shuffle: False
   pin_memory: True
-  checkpoint_path: checkpoint/funnel/roberta.bin
-  save_dir: /jigsaw/output/funnel
+  checkpoint_path: checkpoint/deberta/roberta.bin
+  save_dir: /jigsaw/output/deberta
