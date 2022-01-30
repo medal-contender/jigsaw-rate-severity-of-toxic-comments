@@ -7,7 +7,6 @@ import copy
 import argparse
 import numpy as np
 import torch
-from glob import glob
 from transformers import AutoTokenizer, AdamW
 from collections import defaultdict
 from medal_challenger.utils import (
@@ -144,7 +143,13 @@ def main(cfg):
     train_df = get_dataframe(train_csv)
 
     # K Fold
-    train_df = get_folded_dataframe(train_df, cfg.train_param.num_folds, cfg.program_param.seed)
+    train_df = get_folded_dataframe(
+                    train_df, 
+                    cfg.train_param.num_folds, 
+                    cfg.program_param.seed, 
+                    cfg.train_param.shuffle,
+                    cfg.train_param.is_skf
+                )
 
     # 학습 진행
     for fold in range(0, cfg.train_param.num_folds):
@@ -169,11 +174,14 @@ def main(cfg):
             fold,
             is_train=True
         )
-        
+
         model = JigsawModel(
             f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}",
             cfg.model_param.num_classes,
             cfg.model_param.drop_p,
+            cfg.model_param.is_extra_attn,
+            cfg.model_param.is_deeper_attn,
+            cfg.model_param.device,
         )
         model.to(cfg.model_param.device)
         
