@@ -22,24 +22,20 @@ class AttentionBlock(nn.Module):
     
 class JigsawModel(nn.Module):
     
-    def __init__(self, model_name, num_classes, drop_p, is_extra_attn=False):
+    def __init__(self, model_name, num_classes, drop_p, is_extra_attn=True):
         super().__init__()
         self.is_extra_attn = is_extra_attn
         self.model = AutoModel.from_pretrained(model_name)
         self.drop = nn.Dropout(drop_p)
-        self.first_layer = nn.Linear(
-            1024 
-            if 'large' in model_name
-            else 768,
-            256)
+        self.input_hidden_dim = 1024 if 'large' in model_name else 768
               
         self.attention = nn.Sequential(
             nn.LayerNorm(768),
             nn.Dropout(drop_p),
-            AttentionBlock(768, 768, 1)
+            AttentionBlock(768, 768, num_classes)
         )
         self.fc = nn.Sequential(
-            self.first_layer,
+            nn.Linear(self.input_hidden_dim,256),
             nn.LayerNorm(256),
             nn.Dropout(drop_p),
             nn.ReLU(),
@@ -73,7 +69,7 @@ class DeeperJigsawModel(nn.Module):
     def __init__(self, model_name, num_classes, drop_p):
         super().__init__()
 
-        self.num_classes = num_classes
+        self.input_hidden_dim = 1024 if 'large' in model_name else 768
         config = AutoConfig.from_pretrained(model_name)
         config.update({"output_hidden_states": True,
                        "hidden_dropout_prob": drop_p,
@@ -81,65 +77,42 @@ class DeeperJigsawModel(nn.Module):
 
         self.model = AutoModel.from_pretrained(model_name, config=config)
 
-        self.attention1 = self.attention_block(768,256)
-        self.attention2 = self.attention_block(768,256)
-        self.attention4 = self.attention_block(768,256)
-        self.attention8 = self.attention_block(768,256)
-        self.attention16 = self.attention_block(768,256)
-        self.attention20 = self.attention_block(768,256)
-        self.attention_sm = self.attention_block(768,6)
+        dim_list = [
+            [self.input_hidden_dim,256,num_classes],
+            [self.input_hidden_dim,256,num_classes],
+            [self.input_hidden_dim,256,num_classes],
+            [self.input_hidden_dim,256,num_classes],
+            [self.input_hidden_dim,256,num_classes],
+            [self.input_hidden_dim,256,num_classes],
+            [self.input_hidden_dim,6,num_classes],
+        ]
+        self.attentions = [AttentionBlock(*dim) for dim in dim_list]
+        self.fc = nn.Linear(self.input_hidden_dim,num_classes)
 
-        self.fc = nn.Sequential(
-            nn.Linear(768, num_classes)
-        )
-
-    def attention_block(self,in_features,out_features):
-
-        return nn.Sequential(
-            nn.Linear(in_features,out_features),
-            nn.Tanh(),
-            nn.Linear(out_features,self.num_classes),
-            nn.Softmax(dim=1)
-        )
-
-    def get_context(self, attention_block, value):
-
-        weights = attention_block(value)
-        context = torch.sum(weights*value,dim=1)
-
-        return context
 
     def forward(self, input_ids, attention_mask):
-        output = self.model(input_ids=input_ids,
-                            attention_mask=attention_mask)
+        outputs = self.model(input_ids=input_ids,attention_mask=attention_mask)
+        output_list = [
+            outputs.hidden_states[-1],
+            outputs.hidden_states[-2],
+            outputs.hidden_states[-4],
+            outputs.hidden_states[-8],
+            outputs.hidden_states[-11],
+            outputs.hidden_states[-13],
+        ]
 
-        context1 = self.get_context(self.attention1,output.hidden_states[-1])
-        context2 = self.get_context(self.attention2,output.hidden_states[-2])
-        context4 = self.get_context(self.attention4,output.hidden_states[-4])
-        context8 = self.get_context(self.attention8,output.hidden_states[-8])
-        context16 = self.get_context(self.attention16,output.hidden_states[-11])
-        context20 = self.get_context(self.attention20,output.hidden_states[-13])
+        contexts = list()
+        for i,attention in enumerate(self.attentions[:-1]):
+            contexts.append(
+                attention(output_list[i])
+            )
         
-        context_vectors = torch.stack(
-            [
-                context1, 
-                context2, 
-                context4, 
-                context8, 
-                context16, 
-                context20
-            ], 
-            dim=1
+        context = torch.stack(
+            contexts, dim=1
         )
-
-        layer_weights = self.attention_sm(context_vectors)
-
-        context_vector = torch.sum(
-            layer_weights * context_vectors, 
-            dim=1
-        )
-
-        output = self.fc(context_vector)
+        
+        context = self.attentions[-1](context)
+        output = self.fc(context)
         return output
 
 def fetch_scheduler(optimizer, cfg):
