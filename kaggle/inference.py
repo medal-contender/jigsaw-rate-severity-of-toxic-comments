@@ -17,7 +17,7 @@ from transformers import AutoTokenizer
 from tqdm import tqdm
 from glob import glob
 import sys
-sys.path.insert(0, '../input/medalchallengerrepo/jigsaw-rate-severity-of-toxic-comments-develop/jigsaw_toxic_severity_rating/')
+sys.path.insert(0, '../input/attention3/jigsaw-rate-severity-of-toxic-comments-feature-attention3/jigsaw_toxic_severity_rating/')
 
 from tqdm import tqdm
 
@@ -25,8 +25,8 @@ from tqdm import tqdm
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 # pt파일 경로
-MODEL_WEIGHTS = glob('../input/roberta/roberta/*.pt')
-MODEL_DIR = '../input/models/roberta-base'
+MODEL_WEIGHTS = glob('../input/attention3/attention3/*.pt')
+MODEL_DIR = '../input/attention3/deberta-v3-base'
 
 CONFIG = dict(
     seed = 42,
@@ -35,12 +35,6 @@ CONFIG = dict(
     device = torch.device("cuda"),
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
 )
-
-ensemble_key = {
-    'DEBERTA-BASE-DATA': 1.0,
-    'roberta': 1.2,
-    'muppet': 0.9,
-}
 
 class JigsawDataset(Dataset):
     def __init__(self, df, tokenizer, max_length):
@@ -71,16 +65,13 @@ class JigsawDataset(Dataset):
         }    
 
 def set_seed(seed = 42):
-    '''Sets the seed of the entire notebook so results are the same every time we run.
-    This is for REPRODUCIBILITY.'''
+    
     np.random.seed(seed)
     random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-    # When running on the CuDNN backend, two further options must be set
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    # Set a fixed value for the hash seed
     os.environ['PYTHONHASHSEED'] = str(seed)
 
     
@@ -108,17 +99,12 @@ def inference(model_paths, textloader, device):
     final_preds = []
     for i, path in enumerate(model_paths):
 
-        model_keyword = os.path.basename(path).split('_')[0][1:-1]
-        assert model_keyword in ensemble_key, f"Model File Should Contain A Keyword Predifined In Ensemble Key"
-        model_value = ensemble_key[model_keyword]
-
         model = torch.load(path)
         model.to(CONFIG['device'])
         
         print(f"Getting predictions for model {i+1}")
         preds = valid_fn(model, textloader, device)
-        # Weight On Predictions
-        preds *= model_value
+
         final_preds.append(preds)
     
         del model
@@ -127,8 +113,8 @@ def inference(model_paths, textloader, device):
     final_preds = np.mean(final_preds, axis=0)
     return final_preds
 
-set_seed(CONFIG['seed'])
 
+set_seed(CONFIG['seed'])
 df = pd.read_csv("../input/jigsaw-toxic-severity-rating/comments_to_score.csv")
 
 test_dataset = JigsawDataset(
@@ -144,12 +130,14 @@ test_loader = DataLoader(
                     pin_memory=True
                 )
 
-preds1 = inference(MODEL_WEIGHTS, test_loader, CONFIG['device'])
+preds = inference(MODEL_WEIGHTS, test_loader, CONFIG['device'])
 
-preds = (preds1-preds1.min())/(preds1.max()-preds1.min())
+
+preds = (preds-preds.min())/(preds.max()-preds.min())
+
 
 sub_df = pd.DataFrame()
 sub_df['comment_id'] = df['comment_id']
 sub_df['score'] = preds
 sub_df['score'] = sub_df['score'].rank(method='first')
-sub_df[['comment_id', 'score']].to_csv("/jigsaw/submission.csv", index=False)
+sub_df[['comment_id', 'score']].to_csv("submission.csv", index=False)
