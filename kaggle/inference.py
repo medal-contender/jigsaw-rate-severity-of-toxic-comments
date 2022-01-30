@@ -19,8 +19,6 @@ from glob import glob
 import sys
 sys.path.insert(0, '../input/medalchallengerrepo/jigsaw-rate-severity-of-toxic-comments-develop/jigsaw_toxic_severity_rating/')
 
-import re
-from bs4 import BeautifulSoup
 from tqdm import tqdm
 
 # For descriptive error messages
@@ -129,58 +127,9 @@ def inference(model_paths, textloader, device):
     final_preds = np.mean(final_preds, axis=0)
     return final_preds
 
-
-def clean(text):
-    
-    text = text.replace(r"what's", "what is ")    
-    text = text.replace(r"\'ve", " have ")
-    text = text.replace(r"can't", "cannot ")
-    text = text.replace(r"n't", " not ")
-    text = text.replace(r"i'm", "i am ")
-    text = text.replace(r"\'re", " are ")
-    text = text.replace(r"\'d", " would ")
-    text = text.replace(r"\'ll", " will ")
-    text = text.replace(r"\'scuse", " excuse ")
-    text = text.replace(r"\'s", " ")
-    text = text.replace(r"@USER", "")
-    
-    # Clean some punctutations
-    text = text.replace('\n', ' \n ')
-    text = text.replace(r'([a-zA-Z]+)([/!?.])([a-zA-Z]+)',r'\1 \2 \3')
-    # Replace repeating characters more than 3 times to length of 3
-    text = text.replace(r'([*!?\'])\1\1{2,}',r'\1\1\1')    
-    # Add space around repeating characters
-    text = text.replace(r'([*!?\']+)',r' \1 ')    
-    # patterns with repeating characters 
-    text = text.replace(r'([a-zA-Z])\1{2,}\b',r'\1\1')
-    text = text.replace(r'([a-zA-Z])\1\1{2,}\B',r'\1\1\1')
-    text = text.replace(r'[ ]{2,}',' ').strip()   
-    text = text.replace(r'[ ]{2,}',' ').strip()   
-
-    template = re.compile(r'https?://\S+|www\.\S+')
-    text = template.sub(r'', text)
-    soup = BeautifulSoup(text, 'lxml')
-    only_text = soup.get_text()
-    text = only_text
-    emoji_pattern = re.compile("["
-                               u"\U0001F600-\U0001F64F"
-                               u"\U0001F300-\U0001F5FF"
-                               u"\U0001F680-\U0001F6FF"
-                               u"\U0001F1E0-\U0001F1FF"
-                               u"\U00002702-\U000027B0"
-                               u"\U000024C2-\U0001F251"
-                               "]+", flags = re.UNICODE)
-    text = emoji_pattern.sub(r'', text)
-    text = re.sub(r"[^a-zA-Z\d]", " ", text)
-    text = re.sub(' +', ' ', text)
-    text = text.strip()
-    
-    return text
-
-
 set_seed(CONFIG['seed'])
-df = pd.read_csv("/jigsaw/input/jigsaw-toxic-severity-rating/comments_to_score.csv")
-df['text'] = df['text'].apply(lambda x: clean(x))
+
+df = pd.read_csv("../input/jigsaw-toxic-severity-rating/comments_to_score.csv")
 
 test_dataset = JigsawDataset(
                     df, 
@@ -197,11 +146,9 @@ test_loader = DataLoader(
 
 preds1 = inference(MODEL_WEIGHTS, test_loader, CONFIG['device'])
 
-
 preds = (preds1-preds1.min())/(preds1.max()-preds1.min())
 
-
-sub_df = pd.textFrame()
+sub_df = pd.DataFrame()
 sub_df['comment_id'] = df['comment_id']
 sub_df['score'] = preds
 sub_df['score'] = sub_df['score'].rank(method='first')
