@@ -6,11 +6,9 @@ from medal_challenger.configs import SCHEDULER_LIST
 from transformers import AutoConfig
 
 class AttentionBlock(nn.Module):
+
     def __init__(self, in_features, middle_features, out_features):
         super().__init__()
-        self.in_features = in_features
-        self.middle_features = middle_features
-        self.out_features = out_features
         self.W = nn.Linear(in_features, middle_features)
         self.V = nn.Linear(middle_features, out_features)
 
@@ -24,8 +22,9 @@ class AttentionBlock(nn.Module):
     
 class JigsawModel(nn.Module):
     
-    def __init__(self, model_name, num_classes, drop_p):
+    def __init__(self, model_name, num_classes, drop_p, is_extra_attn=False):
         super().__init__()
+        self.is_extra_attn = is_extra_attn
         self.model = AutoModel.from_pretrained(model_name)
         self.drop = nn.Dropout(drop_p)
         self.first_layer = nn.Linear(
@@ -33,12 +32,11 @@ class JigsawModel(nn.Module):
             if 'large' in model_name
             else 768,
             256)
-        
-        
+              
         self.attention = nn.Sequential(
-           nn.LayerNorm(768),
+            nn.LayerNorm(768),
             nn.Dropout(drop_p),
-           AttentionBlock(768, 768, 1)
+            AttentionBlock(768, 768, 1)
         )
         self.fc = nn.Sequential(
             self.first_layer,
@@ -55,124 +53,94 @@ class JigsawModel(nn.Module):
             attention_mask=mask,
             output_hidden_states=False
         )
-        out = self.attention(out[0])
+        # max_length 차원을 가지는 경우
+        if out[0].dim() == 3:
+            # 추가 Attention 사용 
+            if self.is_extra_attn:
+                out = self.attention(out[0])
+            # 시퀀스 토큰 전체의 평균을 사용
+            else:
+                out = torch.mean(out[0],axis=1)
+                out = self.drop(out)
+        else:
+            out = self.drop(out[1])
         outputs = self.fc(out)
         return outputs
+        
+ 
+class DeeperJigsawModel(nn.Module):
 
-'''
     def __init__(self, model_name, num_classes, drop_p):
         super().__init__()
 
+        self.num_classes = num_classes
         config = AutoConfig.from_pretrained(model_name)
         config.update({"output_hidden_states": True,
                        "hidden_dropout_prob": drop_p,
                        "layer_norm_eps": 1e-7})
 
-        self.roberta = AutoModel.from_pretrained(model_name, config=config)
+        self.model = AutoModel.from_pretrained(model_name, config=config)
 
-        self.attention1 = nn.Sequential(
-            nn.Linear(768, 256),
-            nn.Tanh(),
-            nn.Linear(256, 1),
-            nn.Softmax(dim=1)
-        )
-        self.attention2 = nn.Sequential(
-            nn.Linear(768, 256),
-            nn.Tanh(),
-            nn.Linear(256, 1),
-            nn.Softmax(dim=1)
-        )
-        self.attention4 = nn.Sequential(
-            nn.Linear(768, 256),
-            nn.Tanh(),
-            nn.Linear(256, 1),
-            nn.Softmax(dim=1)
-        )
-        self.attention8 = nn.Sequential(
-            nn.Linear(768, 256),
-            nn.Tanh(),
-            nn.Linear(256, 1),
-            nn.Softmax(dim=1)
-        )
-        self.attention16 = nn.Sequential(
-            nn.Linear(768, 256),
-            nn.Tanh(),
-            nn.Linear(256, 1),
-            nn.Softmax(dim=1)
-        )
-        self.attention20 = nn.Sequential(
-            nn.Linear(768, 256),
-            nn.Tanh(),
-            nn.Linear(256, 1),
-            nn.Softmax(dim=1)
-        )
+        self.attention1 = self.attention_block(768,256)
+        self.attention2 = self.attention_block(768,256)
+        self.attention4 = self.attention_block(768,256)
+        self.attention8 = self.attention_block(768,256)
+        self.attention16 = self.attention_block(768,256)
+        self.attention20 = self.attention_block(768,256)
+        self.attention_sm = self.attention_block(768,6)
 
-        self.attention_sm = nn.Sequential(
-            nn.Linear(768, 6),
-            nn.Tanh(),
-            nn.Linear(6, 1),
-            nn.Softmax(dim=1)
-        )
-
-        self.regressor = nn.Sequential(
+        self.fc = nn.Sequential(
             nn.Linear(768, num_classes)
         )
 
+    def attention_block(self,in_features,out_features):
+
+        return nn.Sequential(
+            nn.Linear(in_features,out_features),
+            nn.Tanh(),
+            nn.Linear(out_features,self.num_classes),
+            nn.Softmax(dim=1)
+        )
+
+    def get_context(self, attention_block, value):
+
+        weights = attention_block(value)
+        context = torch.sum(weights*value,dim=1)
+
+        return context
+
     def forward(self, input_ids, attention_mask):
-        roberta_output = self.roberta(input_ids=input_ids,
-                                      attention_mask=attention_mask)
+        output = self.model(input_ids=input_ids,
+                            attention_mask=attention_mask)
 
-        # There are a total of 13 layers of hidden states.
-        # 1 for the embedding layer, and 12 for the 12 Roberta layers.
-        # We take the hidden states from the last Roberta layer.
-        last_layer_hidden_states = roberta_output.hidden_states[-1]
-        weights_1 = self.attention1(last_layer_hidden_states)
-        context_vector_1 = torch.sum(
-            weights_1 * last_layer_hidden_states, dim=1)
+        context1 = self.get_context(self.attention1,output.hidden_states[-1])
+        context2 = self.get_context(self.attention2,output.hidden_states[-2])
+        context4 = self.get_context(self.attention4,output.hidden_states[-4])
+        context8 = self.get_context(self.attention8,output.hidden_states[-8])
+        context16 = self.get_context(self.attention16,output.hidden_states[-11])
+        context20 = self.get_context(self.attention20,output.hidden_states[-13])
+        
+        context_vectors = torch.stack(
+            [
+                context1, 
+                context2, 
+                context4, 
+                context8, 
+                context16, 
+                context20
+            ], 
+            dim=1
+        )
 
-        last2_layer_hidden_states = roberta_output.hidden_states[-2]
-        weights_2 = self.attention2(last2_layer_hidden_states)
-        context_vector_2 = torch.sum(
-            weights_2 * last2_layer_hidden_states, dim=1)
+        layer_weights = self.attention_sm(context_vectors)
 
-        last4_layer_hidden_states = roberta_output.hidden_states[-4]
-        weights_4 = self.attention4(last4_layer_hidden_states)
-        context_vector_4 = torch.sum(
-            weights_4 * last4_layer_hidden_states, dim=1)
+        context_vector = torch.sum(
+            layer_weights * context_vectors, 
+            dim=1
+        )
 
-        last8_layer_hidden_states = roberta_output.hidden_states[-8]
-        weights_8 = self.attention8(last8_layer_hidden_states)
-        context_vector_8 = torch.sum(
-            weights_8 * last8_layer_hidden_states, dim=1)
-
-        last16_layer_hidden_states = roberta_output.hidden_states[-11]
-        weights_16 = self.attention16(last16_layer_hidden_states)
-        context_vector_16 = torch.sum(
-            weights_16 * last16_layer_hidden_states, dim=1)
-
-        last20_layer_hidden_states = roberta_output.hidden_states[-13]
-        weights_20 = self.attention20(last20_layer_hidden_states)
-        context_vector_20 = torch.sum(
-            weights_20 * last20_layer_hidden_states, dim=1)
-
-        con_context_vectors = torch.stack(
-            [context_vector_1, context_vector_2, context_vector_4, context_vector_8, context_vector_16, context_vector_20], dim=1)
-
-#         print(context_vector_1.shape)
-        # con_context_vectors = torch.stack([context_vector_1, context_vector_2, context_vector_4, context_vector_8], dim=1)
-#         print(con_context_vectors.shape)
-        layer_weights = self.attention_sm(con_context_vectors)
-#         print(layer_weights.shape)
-        final_context_vector = torch.sum(
-            layer_weights * con_context_vectors, dim=1)
-
-#         print(final_context_vector.shape)
-        ans = self.regressor(final_context_vector)
-#         print(ans.shape)
-
-        # Now we reduce the context vector to the prediction score.
-        return ans
-'''
+        output = self.fc(context_vector)
+        return output
 
 def fetch_scheduler(optimizer, cfg):
     '''
