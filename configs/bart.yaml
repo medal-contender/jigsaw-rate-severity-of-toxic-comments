@@ -30,7 +30,7 @@ train_param:
   batch_size: 16
   T_max: 500
   T_0: 50
-  save_dir: checkpoint/roberta
+  save_dir: checkpoint/bart
   loss: margin_ranking_loss
   num_workers: 6
   shuffle: True
@@ -48,5 +48,5 @@ infer_param:
   num_workers: 6
   shuffle: False
   pin_memory: True
-  checkpoint_path: checkpoint/roberta/roberta.bin
-  save_dir: /jigsaw/output/roberta
+  checkpoint_path: checkpoint/bart/bart.bin
+  save_dir: /jigsaw/output/bart
