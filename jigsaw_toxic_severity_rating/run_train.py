@@ -7,7 +7,6 @@ import copy
 import argparse
 import numpy as np
 import torch
-from glob import glob
 from transformers import AutoTokenizer, AdamW
 from collections import defaultdict
 from medal_challenger.utils import (
@@ -19,6 +18,7 @@ from medal_challenger.model import JigsawModel, fetch_scheduler
 from medal_challenger.train import train_one_epoch, valid_one_epoch, score_one_epoch
 from colorama import Fore, Style
 
+red_font = Fore.RED
 blue_font = Fore.BLUE
 yellow_font = Fore.YELLOW
 reset_all = Style.RESET_ALL
@@ -48,7 +48,6 @@ def run_training(
         print("[INFO] Using GPU: {}\n".format(torch.cuda.get_device_name()))
     
     start = time.time()
-    best_model_wts = copy.deepcopy(model.state_dict())
     best_epoch_loss = np.inf
     history = defaultdict(list)
     best_file = None
@@ -96,17 +95,16 @@ def run_training(
             best_epoch_loss = val_epoch_loss
             # 이전 베스트 모델 삭제
             if best_file is None:
-                best_file = f'{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.bin'
+                best_file = f'{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.pt'
             else:
                 os.remove(best_file)
-                best_file = f'{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.bin'
+                best_file = f'{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.pt'
             
             run.summary["Best Loss"] = best_epoch_loss
-            best_model_wts = copy.deepcopy(model.state_dict())
-            PATH = f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.bin"
+            PATH = f"{save_dir}/[{cfg.training_keyword.upper()}]_SCHEDULER_{cfg.model_param.scheduler}_FOLD_{fold}_EPOCH_{epoch}_LOSS_{best_epoch_loss:.4f}.pt"
             # 모델 저장
-            torch.save(model.state_dict(), PATH)
-            print(f"Model Saved{reset_all}")
+            torch.save(model,PATH)
+            print(f"{red_font}Model Saved{reset_all}")
             
         print()
     
@@ -116,10 +114,7 @@ def run_training(
         time_elapsed // 3600, (time_elapsed % 3600) // 60, (time_elapsed % 3600) % 60))
     print("Best Loss: {:.4f}".format(best_epoch_loss))
     
-    # 베스트 모델 로드
-    model.load_state_dict(best_model_wts)
-    
-    return model, history
+    return history
 
 
 def main(cfg):
@@ -129,9 +124,6 @@ def main(cfg):
     )
     cfg.group = f'{cfg.program_param.project_name}.{cfg.model_param.model_name}.{cfg.training_keyword}'
 
-    if "deberta" in cfg.model_param.model_name:
-        cfg.train_param.batch_size = int(cfg.train_param.batch_size/2)
-        cfg.valid_param.batch_size = int(cfg.valid_param.batch_size/2)
     wandb.login(key=cfg.program_param.wandb_key)
 
     set_seed(cfg.program_param.seed)
@@ -151,7 +143,13 @@ def main(cfg):
     train_df = get_dataframe(train_csv)
 
     # K Fold
-    train_df = get_folded_dataframe(train_df, cfg.train_param.num_folds, cfg.program_param.seed)
+    train_df = get_folded_dataframe(
+                    train_df, 
+                    cfg.train_param.num_folds, 
+                    cfg.program_param.seed, 
+                    cfg.train_param.shuffle,
+                    cfg.train_param.is_skf
+                )
 
     # 학습 진행
     for fold in range(0, cfg.train_param.num_folds):
@@ -176,11 +174,14 @@ def main(cfg):
             fold,
             is_train=True
         )
-        
+
         model = JigsawModel(
             f"../models/{BERT_MODEL_LIST[cfg.model_param.model_name]}",
             cfg.model_param.num_classes,
             cfg.model_param.drop_p,
+            cfg.model_param.is_extra_attn,
+            cfg.model_param.is_deeper_attn,
+            cfg.model_param.device,
         )
         model.to(cfg.model_param.device)
         
@@ -191,17 +192,17 @@ def main(cfg):
         )
         scheduler = fetch_scheduler(optimizer,cfg)
         
-        model, history = run_training(
-                            model, 
-                            optimizer, 
-                            scheduler,
-                            fold=fold,
-                            save_dir=save_dir,
-                            train_loader=train_loader,
-                            valid_loader=valid_loader,
-                            run=run,
-                            cfg=cfg,
-                        )
+        history = run_training(
+                    model, 
+                    optimizer, 
+                    scheduler,
+                    fold=fold,
+                    save_dir=save_dir,
+                    train_loader=train_loader,
+                    valid_loader=valid_loader,
+                    run=run,
+                    cfg=cfg,
+                )
         
         run.finish()
         
