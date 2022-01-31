@@ -117,7 +117,7 @@ class JigsawModel(nn.Module):
         # Simple Forward Pass
         else:
             out = self.drop(out[1])
-            out = self.fc(out)
+            out = self.deep_fc(out)
         return out
 
 
