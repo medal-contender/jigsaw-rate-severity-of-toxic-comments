@@ -5,10 +5,14 @@ cd ./models
 # 모델 레포지토리 클론
 apt-get install git-lfs
 
-
 # gpt2
 git clone https://huggingface.co/gpt2
 cd ./gpt2
+GIT_LFS_SKIP_SMUDGE=1
+cd ..
+# BART
+git clone https://huggingface.co/facebook/bart-base
+cd ./bart-base
 GIT_LFS_SKIP_SMUDGE=1
 cd ..
 # HateBERT
