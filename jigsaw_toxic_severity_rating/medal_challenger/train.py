@@ -1,8 +1,14 @@
+import os
 import gc
 import torch
 import torch.nn as nn
+import numpy as np
+import pandas as pd
 from tqdm import tqdm
+from medal_challenger.dataset import prepare_loaders
 from torch.cuda.amp import autocast, GradScaler
+
+from medal_challenger.dataset import JigsawDataset
 
 def criterion(outputs1, outputs2, targets, margin):
     '''
@@ -24,9 +30,8 @@ def train_one_epoch(
         optimizer, 
         scheduler, 
         dataloader, 
-        device, 
         epoch,
-        CONFIG,
+        cfg,
     ):
     '''
         1 에폭 학습을 위한 함수
@@ -49,11 +54,11 @@ def train_one_epoch(
     bar = tqdm(enumerate(dataloader), total=len(dataloader))
     for step, data in bar:
         # 기기 변경
-        more_toxic_ids = data['more_toxic_ids'].to(device, dtype = torch.long)
-        more_toxic_mask = data['more_toxic_mask'].to(device, dtype = torch.long)
-        less_toxic_ids = data['less_toxic_ids'].to(device, dtype = torch.long)
-        less_toxic_mask = data['less_toxic_mask'].to(device, dtype = torch.long)
-        targets = data['target'].to(device, dtype=torch.long)
+        more_toxic_ids = data['more_toxic_ids'].to(cfg.model_param.device, dtype = torch.long)
+        more_toxic_mask = data['more_toxic_mask'].to(cfg.model_param.device, dtype = torch.long)
+        less_toxic_ids = data['less_toxic_ids'].to(cfg.model_param.device, dtype = torch.long)
+        less_toxic_mask = data['less_toxic_mask'].to(cfg.model_param.device, dtype = torch.long)
+        targets = data['target'].to(cfg.model_param.device, dtype=torch.long)
         
         batch_size = more_toxic_ids.size(0)
 
@@ -62,8 +67,13 @@ def train_one_epoch(
             more_toxic_outputs = model(more_toxic_ids, more_toxic_mask)
             less_toxic_outputs = model(less_toxic_ids, less_toxic_mask)
             
-            loss = criterion(more_toxic_outputs, less_toxic_outputs, targets, CONFIG['margin'])
-            loss = loss / CONFIG['n_accumulate']
+            loss = criterion(
+                more_toxic_outputs, 
+                less_toxic_outputs, 
+                targets, 
+                cfg.train_param.ranking_margin
+            )
+            loss = loss / cfg.train_param.accumulate_grad_batches
         
         '''
             Gradients 저장 및 Upscaling:
@@ -76,7 +86,7 @@ def train_one_epoch(
         scaler.scale(loss).backward()
 
         # Gradient Accumulation
-        if (step + 1) % CONFIG['n_accumulate'] == 0:
+        if (step + 1) % cfg.train_param.accumulate_grad_batches == 0:
             # Optimizer가 모든 파라미터를 Iterate하면서 모든 파라미터의 Gradients로 파라미터를 업데이트 합니다.
             # Makes The Optimizer Iterate Over All Parameters (Tensors) 
             # It Is Supposed To Update And Use Their Internally Stored Grad To Update Their Values.
@@ -148,3 +158,34 @@ def valid_one_epoch(
     gc.collect()
     
     return epoch_loss
+
+@torch.no_grad()
+def score_one_epoch(model,cfg):
+    model.eval()
+    score_csv = os.path.join(
+                    '../input',
+                    cfg.data_param.dir_name,
+                    cfg.data_param.valid_file_name
+                )
+    df = pd.read_csv(score_csv)
+    dataloader = prepare_loaders(df, cfg, is_train=False)
+    
+    PREDS = []
+    
+    bar = tqdm(enumerate(dataloader), total=len(dataloader))
+    for step, data in bar:
+        ids = data['ids'].to(cfg.model_param.device, dtype = torch.long)
+        mask = data['mask'].to(cfg.model_param.device, dtype = torch.long)
+        
+        outputs = model(ids, mask)
+        PREDS.append(outputs.view(-1).cpu().detach().numpy()) 
+    
+    PREDS = np.concatenate(PREDS)
+    gc.collect()
+
+    df['pred'] = PREDS
+    score_df = df.sort_values(by='score').reset_index(drop=True)
+    pred_df = df.sort_values(by='pred').reset_index(drop=True)
+    score = (score_df['text']==pred_df['text']).sum()/len(df)
+
+    return PREDS, score

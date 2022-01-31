@@ -8,6 +8,8 @@ class JigsawDataset(Dataset):
         self.df = df
         self.max_len = max_length
         self.tokenizer = tokenizer
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
         self.is_train = is_train
         if is_train:
             self.more_toxic = df['more_toxic'].values
@@ -85,7 +87,7 @@ class JigsawDataset(Dataset):
                 'mask': torch.tensor(mask, dtype=torch.long)
             }    
 
-def prepare_loaders(df, CONFIG, fold=1, is_train=True):
+def prepare_loaders(df, cfg, fold=1, is_train=True):
     '''
         데이터로더를 반환합니다.
         학습 시:
@@ -97,28 +99,47 @@ def prepare_loaders(df, CONFIG, fold=1, is_train=True):
         df_train = df[df.kfold != fold].reset_index(drop=True)
         df_valid = df[df.kfold == fold].reset_index(drop=True)
         
-        train_dataset = JigsawDataset(df_train, tokenizer=CONFIG['tokenizer'], max_length=CONFIG['max_length'])
-        valid_dataset = JigsawDataset(df_valid, tokenizer=CONFIG['tokenizer'], max_length=CONFIG['max_length'])
+        train_dataset = JigsawDataset(
+            df_train, 
+            tokenizer=cfg.tokenizer, 
+            max_length=cfg.model_param.max_length
+        )
+        valid_dataset = JigsawDataset(
+            df_valid, 
+            tokenizer=cfg.tokenizer, 
+            max_length=cfg.model_param.max_length
+        )
 
-        train_loader = DataLoader(train_dataset, batch_size=CONFIG['train_batch_size'], 
-                                num_workers=2, shuffle=True, pin_memory=True, drop_last=True)
-        valid_loader = DataLoader(valid_dataset, batch_size=CONFIG['valid_batch_size'], 
-                                num_workers=2, shuffle=False, pin_memory=True)
+        train_loader = DataLoader(
+            train_dataset, 
+            batch_size=cfg.train_param.batch_size,
+            num_workers=cfg.train_param.num_workers, 
+            shuffle=cfg.train_param.shuffle, 
+            pin_memory=cfg.train_param.pin_memory, 
+            drop_last=cfg.train_param.drop_last
+        )
+        valid_loader = DataLoader(
+            valid_dataset, 
+            batch_size=cfg.valid_param.batch_size, 
+            num_workers=cfg.valid_param.num_workers, 
+            shuffle=cfg.valid_param.shuffle, 
+            pin_memory=cfg.valid_param.pin_memory
+        )
         
         return train_loader, valid_loader
 
     else:
         test_dataset = JigsawDataset(
                         df, 
-                        CONFIG['tokenizer'], 
-                        max_length=CONFIG['max_length'], 
+                        cfg.tokenizer, 
+                        max_length=cfg.model_param.max_length, 
                         is_train=False
         )
         test_loader = DataLoader(
                         test_dataset, 
-                        batch_size=CONFIG['test_batch_size'],
-                        num_workers=2, 
-                        shuffle=False, 
-                        pin_memory=True
+                        batch_size=cfg.infer_param.batch_size,
+                        num_workers=cfg.infer_param.num_workers, 
+                        shuffle=cfg.infer_param.shuffle, 
+                        pin_memory=cfg.infer_param.pin_memory
                     )
         return test_loader
