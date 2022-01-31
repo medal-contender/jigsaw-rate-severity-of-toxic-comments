@@ -8,6 +8,8 @@ class JigsawDataset(Dataset):
         self.df = df
         self.max_len = max_length
         self.tokenizer = tokenizer
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
         self.is_train = is_train
         if is_train:
             self.more_toxic = df['more_toxic'].values
