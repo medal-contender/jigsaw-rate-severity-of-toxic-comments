@@ -4,6 +4,13 @@ cd ./models
 
 # 모델 레포지토리 클론
 apt-get install git-lfs
+
+
+# BART
+git clone https://huggingface.co/facebook/bart-base
+cd ./bart-base
+GIT_LFS_SKIP_SMUDGE=1
+cd ..
 # HateBERT
 git clone https://huggingface.co/GroNLP/hateBERT
 cd ./hateBERT
