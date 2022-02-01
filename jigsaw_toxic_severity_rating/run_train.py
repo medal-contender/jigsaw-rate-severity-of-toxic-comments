@@ -182,6 +182,7 @@ def main(cfg):
             cfg.model_param.is_extra_attn,
             cfg.model_param.is_deeper_attn,
             cfg.model_param.device,
+            cfg.model_param.level_list,
         )
         model.to(cfg.model_param.device)
         

@@ -53,7 +53,8 @@ class JigsawModel(nn.Module):
         drop_p, 
         is_extra_attn=True,
         is_deeper_attn=True,
-        device='cuda'
+        device='cuda',
+        level_list=[-1,-2,-4],
         ):
         
         super().__init__()
@@ -69,21 +70,16 @@ class JigsawModel(nn.Module):
 
         self.model = AutoModel.from_pretrained(model_name, config=config)
         self.drop = nn.Dropout(drop_p)
-              
-        self.dims_level_list = [
-            [self.input_hidden_dim,256,num_classes],
-            [self.input_hidden_dim,256,num_classes],
-            [self.input_hidden_dim,256,num_classes],
-            [self.input_hidden_dim,256,num_classes],
-            [self.input_hidden_dim,256,num_classes],
-            [self.input_hidden_dim,256,num_classes],
-            [self.input_hidden_dim,6,num_classes],
-        ]
 
         # Selection Of Indices Of Hidden Layers
-        self.level_list = [
-            -1,-2,-4,-8,-11,-13
+        self.level_list = level_list
+              
+        self.dims_level_list = [
+            [self.input_hidden_dim,256,num_classes] for _ in range(len(self.level_list))
         ]
+        self.dims_level_list.append(
+            [self.input_hidden_dim, len(self.level_list), num_classes]
+        )
         
         # For The Top Hidden Layer
         self.simple_attention = AttentionBlockWithLN(

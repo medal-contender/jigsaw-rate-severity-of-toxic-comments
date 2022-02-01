@@ -18,6 +18,7 @@ model_param:
   num_classes: 1
   device: cuda
   drop_p: 0.2
+  level_list: [-1,-2,-4]
 
 train_param:
   epochs: 4
