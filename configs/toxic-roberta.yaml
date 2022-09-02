@@ -20,6 +20,7 @@ model_param:
   drop_p: 0.2
   is_extra_attn: True
   is_deeper_attn: True
+  level_list: [-1,-2,-4]
 
 train_param:
   epochs: 4

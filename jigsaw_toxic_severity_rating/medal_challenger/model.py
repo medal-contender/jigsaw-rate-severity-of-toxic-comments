@@ -5,7 +5,7 @@ from torch.optim import lr_scheduler
 from medal_challenger.configs import SCHEDULER_LIST
 from transformers import AutoConfig
 
-class AttentionBlock(nn.Module):
+class AttentionBlockWithLN(nn.Module):
 
     def __init__(self, in_features, middle_features, out_features, drop_p):
         super().__init__()
@@ -26,6 +26,23 @@ class AttentionBlock(nn.Module):
         context_vector = torch.sum(context_vector, dim=1)
         # Context Vector As An Output
         return context_vector
+
+class AttentionBlockWithoutLN(nn.Module):
+
+    def __init__(self, in_features, middle_features, out_features):
+        super().__init__()
+        self.W = nn.Linear(in_features, middle_features)
+        self.V = nn.Linear(middle_features, out_features)
+
+    def forward(self, features):
+        # Attention Mechanism
+        att = torch.tanh(self.W(features))
+        score = self.V(att)
+        attention_weights = torch.softmax(score, dim=1)
+        context_vector = attention_weights * features
+        context_vector = torch.sum(context_vector, dim=1)
+        # Context Vector As An Output
+        return context_vector
     
 class JigsawModel(nn.Module):
     
@@ -36,7 +53,8 @@ class JigsawModel(nn.Module):
         drop_p, 
         is_extra_attn=True,
         is_deeper_attn=True,
-        device='cuda'
+        device='cuda',
+        level_list=[-1,-2,-4],
         ):
         
         super().__init__()
@@ -52,31 +70,26 @@ class JigsawModel(nn.Module):
 
         self.model = AutoModel.from_pretrained(model_name, config=config)
         self.drop = nn.Dropout(drop_p)
-              
-        self.dims_level_list = [
-            [self.input_hidden_dim,256,num_classes,drop_p],
-            [self.input_hidden_dim,256,num_classes,drop_p],
-            [self.input_hidden_dim,256,num_classes,drop_p],
-            [self.input_hidden_dim,256,num_classes,drop_p],
-            [self.input_hidden_dim,256,num_classes,drop_p],
-            [self.input_hidden_dim,256,num_classes,drop_p],
-            [self.input_hidden_dim,6,num_classes,drop_p],
-        ]
 
         # Selection Of Indices Of Hidden Layers
-        self.level_list = [
-            -1,-2,-4,-8,-11,-13
+        self.level_list = level_list
+              
+        self.dims_level_list = [
+            [self.input_hidden_dim,256,num_classes] for _ in range(len(self.level_list))
         ]
+        self.dims_level_list.append(
+            [self.input_hidden_dim, len(self.level_list), num_classes]
+        )
         
         # For The Top Hidden Layer
-        self.simple_attention = AttentionBlock(
+        self.simple_attention = AttentionBlockWithLN(
                                     self.input_hidden_dim, 
                                     self.input_hidden_dim, 
                                     num_classes,
                                     drop_p
                                 ).to(device)
         # For Selected Hidden Layers
-        self.deep_attention = [AttentionBlock(*level).to(device) for level in self.dims_level_list]
+        self.deep_attention = [AttentionBlockWithoutLN(*level).to(device) for level in self.dims_level_list]
         # For Selected Hidden Layers
         self.simple_fc = nn.Linear(self.input_hidden_dim,num_classes)
         # For The Top Hidden Layer
